@@ -39,7 +39,7 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "bubing_RM2025.elf::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-bubing_RM2025.elf-Debug-2083f7112abcae8c6c99.json",
+					"jsonFile" : "target-bubing_RM2025.elf-Debug-d383029753da2c548070.json",
 					"name" : "bubing_RM2025.elf",
 					"projectIndex" : 0
 				}
@@ -49,8 +49,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "D:/RoboMaster_git/RM2025_hero_robot_arm/cmake-build-debug",
-		"source" : "D:/RoboMaster_git/RM2025_hero_robot_arm"
+		"build" : "D:/RoboMaster_git/RM2025_eng_robot_arm/cmake-build-debug",
+		"source" : "D:/RoboMaster_git/RM2025_eng_robot_arm"
 	},
 	"version" : 
 	{

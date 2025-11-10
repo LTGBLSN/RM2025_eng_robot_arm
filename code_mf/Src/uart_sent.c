@@ -17,18 +17,17 @@
 #include "jy61p.h"
 #include "chassis_motor_control.h"
 #include "auto_aim.h"
-
-
-
-
+#include "can_comm.h"
 
 
 void uart_sent_debug()
 {
     while (1)
     {
-        usart6_printf("%d \r\n",
-                      rc_s1);
+        usart6_printf("%f,%f,%f \r\n",
+                      xiaomimotors[4].given_speed,
+                      xiaomimotors[4].fifilter_compute_speed,
+                      xiaomimotors[4].give_tor);
 
 
 

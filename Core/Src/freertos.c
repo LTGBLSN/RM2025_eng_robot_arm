@@ -60,6 +60,7 @@ osThreadId refereeHandle;
 osThreadId servoHandle;
 osThreadId imu_dataHandle;
 osThreadId aim_uart_taskHandle;
+osThreadId xiaomi_taskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -79,6 +80,7 @@ void refree_task(void const * argument);
 void servo_task(void const * argument);
 void IMU_DATA_GET(void const * argument);
 void aim_uart_sent(void const * argument);
+void xiaomi_motor_task(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -176,6 +178,10 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of aim_uart_task */
   osThreadDef(aim_uart_task, aim_uart_sent, osPriorityIdle, 0, 128);
   aim_uart_taskHandle = osThreadCreate(osThread(aim_uart_task), NULL);
+
+  /* definition and creation of xiaomi_task */
+  osThreadDef(xiaomi_task, xiaomi_motor_task, osPriorityIdle, 0, 128);
+  xiaomi_taskHandle = osThreadCreate(osThread(xiaomi_task), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -415,6 +421,24 @@ __weak void aim_uart_sent(void const * argument)
     osDelay(1);
   }
   /* USER CODE END aim_uart_sent */
+}
+
+/* USER CODE BEGIN Header_xiaomi_motor_task */
+/**
+* @brief Function implementing the xiaomi_task thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_xiaomi_motor_task */
+__weak void xiaomi_motor_task(void const * argument)
+{
+  /* USER CODE BEGIN xiaomi_motor_task */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END xiaomi_motor_task */
 }
 
 /* Private application code --------------------------------------------------*/

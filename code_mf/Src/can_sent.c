@@ -18,6 +18,7 @@
 #include "CAN_receive.h"
 #include "error_detection.h"
 #include "can_sent.h"
+#include "can_comm.h"
 
 void can_sent()
 {
@@ -26,12 +27,14 @@ void can_sent()
         if( rc_receive_state == RC_OFFLINE | yaw_6020_state == GM6020_DIE | pitch_6020_state == GM6020_DIE)//遥控器离线，全车断电
         {
             can_rm_cmd_all(0, 0, 0, 0, 0, 0, 0, 0, 0);
+            can_xiaomi_cmd_all(CLOSE_XIAOMI);
         }
         else//遥控器在线，正常进行开关控制
         {
             if(rc_s0 == 2)
             {
                 can_rm_cmd_all(0, 0, 0, 0, 0, 0, 0, 0, 0);
+                can_xiaomi_cmd_all(CLOSE_XIAOMI);
             }
             else if(rc_s0 == 3 | rc_s0 == 1)//运动模式
             {
@@ -44,6 +47,7 @@ void can_sent()
 //                            0,
 //                            0,
 //                            0);
+                can_xiaomi_cmd_all(OPEN_XIAOMI);
                 can_rm_cmd_all(CHASSIS_3508_ID1_GIVEN_CURRENT,
                                CHASSIS_3508_ID2_GIVEN_CURRENT,
                                CHASSIS_3508_ID3_GIVEN_CURRENT,
@@ -58,6 +62,7 @@ void can_sent()
             else//遥控器数据初始化中或错误，全车断电
             {
                 can_rm_cmd_all(0, 0, 0, 0, 0, 0, 0, 0, 0);
+                can_xiaomi_cmd_all(CLOSE_XIAOMI);
             }
 
         }
@@ -81,8 +86,43 @@ void can_rm_cmd_all(int16_t chassis_id1 , int16_t chassis_id2 ,
 
 }
 
-void can_xiaomi_cmd_all()
+void can_xiaomi_cmd_all(uint8_t key)
 {
+    if(key == OPEN_XIAOMI)
+    {
+        CanComm_SendControlPara(xiaomimotors[4]);
+        CanComm_SendControlPara(xiaomimotors[5]);
+    } else
+    {
+        struct xiaomi_motor xiaomi_STOP ;
+        xiaomi_STOP.can_channel = 0x01 ;//can1的所有小米
+
+        xiaomi_STOP.can_id = 0x01 ;
+        CanComm_SendControlPara(xiaomi_STOP);
+        xiaomi_STOP.can_id = 0x02 ;
+        CanComm_SendControlPara(xiaomi_STOP);
+        xiaomi_STOP.can_id = 0x03 ;
+        CanComm_SendControlPara(xiaomi_STOP);
+        xiaomi_STOP.can_id = 0x04 ;
+        CanComm_SendControlPara(xiaomi_STOP);
+
+        xiaomi_STOP.can_channel = 0x02 ;//can1的所有小米
+
+        xiaomi_STOP.can_id = 0x01 ;
+        CanComm_SendControlPara(xiaomi_STOP);
+        xiaomi_STOP.can_id = 0x02 ;
+        CanComm_SendControlPara(xiaomi_STOP);
+        xiaomi_STOP.can_id = 0x03 ;
+        CanComm_SendControlPara(xiaomi_STOP);
+        xiaomi_STOP.can_id = 0x04 ;
+        CanComm_SendControlPara(xiaomi_STOP);
+
+
+
+
+
+    }
+
 
 }
 

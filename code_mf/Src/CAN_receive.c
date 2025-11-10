@@ -20,6 +20,7 @@
 #include "CAN_receive.h"
 #include "main.h"
 #include "gimbal_motor_control.h"
+#include "can_comm.h"
 
 
 extern CAN_HandleTypeDef hcan1;
@@ -60,15 +61,16 @@ static uint8_t              pitch_can_send_data[8];
   * @param[in]      hcan:CAN句柄指针
   * @retval         none
   */
+
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
     if(hcan == &hcan1)
     {
         CAN_RxHeaderTypeDef can1_rx_header;
         uint8_t can1_rx_data[8];
-
         HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &can1_rx_header, can1_rx_data);
 
+        // 首先检查是否是标准ID消息（接收函数2的逻辑）
         switch (can1_rx_header.StdId)
         {
             case CAN_3508_M1_ID:
@@ -80,24 +82,62 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
             case CAN_TRIGGER_MOTOR_ID:
             {
                 static uint8_t i = 0;
-                //get motor id
                 i = can1_rx_header.StdId - CAN_3508_M1_ID;
                 get_motor_measure(&motor_can1_data[i], can1_rx_data);
                 break;
             }
-
             default:
             {
+                // 如果不是标准ID消息，检查是否是小米电机数据（接收函数1的逻辑）
+                // 小米电机数据通过数据内容第一个字节区分
+                switch (can1_rx_data[0])
+                {
+                    case 0x01:
+                    case 0x02:
+                    case 0x03:
+                    case 0x04:
+                    {
+                        int p_int = (can1_rx_data[1] << 8) | can1_rx_data[2];
+                        int v_int = (can1_rx_data[3] << 4) | (can1_rx_data[4] >> 4);
+                        int t_int = ((can1_rx_data[4] & 0xF) << 8) | can1_rx_data[5];
+
+                        xiaomimotors[can1_rx_data[0] - 0x01].last_angle = xiaomimotors[can1_rx_data[0] - 0x01].return_angle;
+                        xiaomimotors[can1_rx_data[0] - 0x01].old_fifiltering_speed = xiaomimotors[can1_rx_data[0] - 0x01].fifilter_compute_speed;
+                        xiaomimotors[can1_rx_data[0] - 0x01].return_angle = uint_to_float(p_int, P_MIN, P_MAX, 16);
+                        xiaomimotors[can1_rx_data[0] - 0x01].return_speed = uint_to_float(v_int, V_MIN, V_MAX, 12);
+                        xiaomimotors[can1_rx_data[0] - 0x01].return_tor = uint_to_float(t_int, T_MIN, T_MAX, 12);
+
+                        float current_angle = xiaomimotors[can1_rx_data[0] - 0x01].return_angle;
+                        float last_angle = xiaomimotors[can1_rx_data[0] - 0x01].last_angle;
+                        float diff = current_angle - last_angle;
+                        if (diff > 12.0f) {
+                            diff -= 25.0f;
+                        } else if (diff < -12.0f) {
+                            diff += 25.0f;
+                        }
+                        xiaomimotors[can1_rx_data[0] - 0x01].new_no_filtering_speed = diff / 0.001f;
+
+                        xiaomimotors[can1_rx_data[0] - 0x01].fifilter_compute_speed =
+                                xiaomimotors[can1_rx_data[0] - 0x01].new_no_filtering_speed
+                                * xiaomimotors[can1_rx_data[0] - 0x01].alpha_speed
+                                + (1.0f - xiaomimotors[can1_rx_data[0] - 0x01].alpha_speed)
+                        * xiaomimotors[can1_rx_data[0] - 0x01].old_fifiltering_speed;
+                        break;
+                    }
+                    default:
+                        break;
+                }
                 break;
             }
         }
-    } else if(hcan == &hcan2)
+    }
+    else if(hcan == &hcan2)
     {
         CAN_RxHeaderTypeDef can2_rx_header;
         uint8_t can2_rx_data[8];
-
         HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &can2_rx_header, can2_rx_data);
 
+        // 首先检查是否是标准ID消息（接收函数2的逻辑）
         switch (can2_rx_header.StdId)
         {
             case CAN_3508_M1_ID:
@@ -109,20 +149,119 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
             case CAN_TRIGGER_MOTOR_ID:
             {
                 static uint8_t i = 0;
-                //get motor id
                 i = can2_rx_header.StdId - CAN_3508_M1_ID;
-                get_motor_measure(&motor_can2_data[i], can2_rx_data); // 注意这里使用了 motor_can2_data 数组
+                get_motor_measure(&motor_can2_data[i], can2_rx_data);
                 break;
             }
-
             default:
             {
+                // 如果不是标准ID消息，检查是否是小米电机数据（接收函数1的逻辑）
+                // 小米电机数据通过数据内容第一个字节区分
+                switch (can2_rx_data[0])
+                {
+                    case 0x01:
+                    case 0x02:
+                    case 0x03:
+                    case 0x04:
+                    {
+                        int p_int = (can2_rx_data[1] << 8) | can2_rx_data[2];
+                        int v_int = (can2_rx_data[3] << 4) | (can2_rx_data[4] >> 4);
+                        int t_int = ((can2_rx_data[4] & 0xF) << 8) | can2_rx_data[5];
+
+                        xiaomimotors[can2_rx_data[0] + 0x03].last_angle = xiaomimotors[can2_rx_data[0] + 0x03].return_angle;
+                        xiaomimotors[can2_rx_data[0] + 0x03].old_fifiltering_speed = xiaomimotors[can2_rx_data[0] + 0x03].fifilter_compute_speed;
+                        xiaomimotors[can2_rx_data[0] + 0x03].return_angle = uint_to_float(p_int, P_MIN, P_MAX, 16);
+                        xiaomimotors[can2_rx_data[0] + 0x03].return_speed = uint_to_float(v_int, V_MIN, V_MAX, 12);
+                        xiaomimotors[can2_rx_data[0] + 0x03].return_tor = uint_to_float(t_int, T_MIN, T_MAX, 12);
+
+                        float current_angle = xiaomimotors[can2_rx_data[0] + 0x03].return_angle;
+                        float last_angle = xiaomimotors[can2_rx_data[0] + 0x03].last_angle;
+                        float diff = current_angle - last_angle;
+                        if (diff > 12.0f) {
+                            diff -= 25.0f;
+                        } else if (diff < -12.0f) {
+                            diff += 25.0f;
+                        }
+                        xiaomimotors[can2_rx_data[0] + 0x03].new_no_filtering_speed = diff / 0.001f;
+
+                        xiaomimotors[can2_rx_data[0] + 0x03].fifilter_compute_speed =
+                                xiaomimotors[can2_rx_data[0] + 0x03].new_no_filtering_speed
+                                * xiaomimotors[can2_rx_data[0] + 0x03].alpha_speed
+                                + (1.0f - xiaomimotors[can2_rx_data[0] + 0x03].alpha_speed)
+                                  * xiaomimotors[can2_rx_data[0] + 0x03].old_fifiltering_speed;
+                        break;
+                    }
+                    default:
+                        break;
+                }
                 break;
             }
         }
-//        pitch_motor_mean_speed_compute();//pitch速度均值滤波 弃用
     }
 }
+//void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+//{
+//    if(hcan == &hcan1)
+//    {
+//        CAN_RxHeaderTypeDef can1_rx_header;
+//        uint8_t can1_rx_data[8];
+//
+//        HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &can1_rx_header, can1_rx_data);
+//
+//        switch (can1_rx_header.StdId)
+//        {
+//            case CAN_3508_M1_ID:
+//            case CAN_3508_M2_ID:
+//            case CAN_3508_M3_ID:
+//            case CAN_3508_M4_ID:
+//            case CAN_YAW_MOTOR_ID:
+//            case CAN_PIT_MOTOR_ID:
+//            case CAN_TRIGGER_MOTOR_ID:
+//            {
+//                static uint8_t i = 0;
+//                //get motor id
+//                i = can1_rx_header.StdId - CAN_3508_M1_ID;
+//                get_motor_measure(&motor_can1_data[i], can1_rx_data);
+//                break;
+//            }
+//
+//            default:
+//            {
+//                break;
+//            }
+//        }
+//    } else if(hcan == &hcan2)
+//    {
+//        CAN_RxHeaderTypeDef can2_rx_header;
+//        uint8_t can2_rx_data[8];
+//
+//        HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &can2_rx_header, can2_rx_data);
+//
+//        switch (can2_rx_header.StdId)
+//        {
+//            case CAN_3508_M1_ID:
+//            case CAN_3508_M2_ID:
+//            case CAN_3508_M3_ID:
+//            case CAN_3508_M4_ID:
+//            case CAN_YAW_MOTOR_ID:
+//            case CAN_PIT_MOTOR_ID:
+//            case CAN_TRIGGER_MOTOR_ID:
+//            {
+//                static uint8_t i = 0;
+//                //get motor id
+//                i = can2_rx_header.StdId - CAN_3508_M1_ID;
+//                get_motor_measure(&motor_can2_data[i], can2_rx_data); // 注意这里使用了 motor_can2_data 数组
+//                break;
+//            }
+//
+//            default:
+//            {
+//                break;
+//            }
+//        }
+////        pitch_motor_mean_speed_compute();//pitch速度均值滤波 弃用
+//    }
+//}
 void CAN2_cmd_pitch(int16_t pitch, int16_t none0, int16_t none1, int16_t none2)
 {
     uint32_t send_mail_box;

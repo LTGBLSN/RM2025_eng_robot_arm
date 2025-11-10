@@ -30,5 +30,7 @@ void can_rm_cmd_all(int16_t chassis_id1 , int16_t chassis_id2 ,
                     int16_t friction_wheel_id1, int16_t friction_wheel_id2 ,
                     int16_t shoot_id3 );
 
+void can_xiaomi_cmd_all(uint8_t key);
+
 
 #endif //BUBING_RM2025_CAN_SENT_H
