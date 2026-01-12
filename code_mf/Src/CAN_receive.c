@@ -86,6 +86,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
                 get_motor_measure(&motor_can1_data[i], can1_rx_data);
                 break;
             }
+
             default:
             {
                 // 如果不是标准ID消息，检查是否是小米电机数据（接收函数1的逻辑）
